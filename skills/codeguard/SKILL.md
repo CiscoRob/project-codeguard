@@ -43,7 +43,7 @@ When writing or reviewing code:
 | Language | Rule Files to Apply |
 |----------|---------------------|
 | apex | codeguard-0-input-validation-injection.md |
-| c | codeguard-0-additional-cryptography.md, codeguard-0-authentication-mfa.md, codeguard-0-authorization-access-control.md, codeguard-0-data-storage.md, codeguard-0-file-handling-and-uploads.md, codeguard-0-framework-and-languages.md, codeguard-0-input-validation-injection.md, codeguard-0-logging.md, codeguard-0-safe-c-functions.md, codeguard-0-xml-and-serialization.md |
+| c | codeguard-0-additional-cryptography.md, codeguard-0-authentication-mfa.md, codeguard-0-authorization-access-control.md, codeguard-0-data-storage.md, codeguard-0-file-handling-and-uploads.md, codeguard-0-input-validation-injection.md, codeguard-0-logging.md, codeguard-0-safe-c-functions.md, codeguard-0-xml-and-serialization.md |
 | cpp | codeguard-0-safe-c-functions.md |
 | docker | codeguard-0-devops-ci-cd-containers.md, codeguard-0-supply-chain-security.md |
 | go | codeguard-0-additional-cryptography.md, codeguard-0-api-web-services.md, codeguard-0-authentication-mfa.md, codeguard-0-authorization-access-control.md, codeguard-0-file-handling-and-uploads.md, codeguard-0-input-validation-injection.md, codeguard-0-mcp-security.md, codeguard-0-session-management-and-cookies.md, codeguard-0-xml-and-serialization.md |
