@@ -23,10 +23,13 @@ dependencies = [
 [tool.uv]
 # CVE floors for transitive deps (remove once upstream raises its floor).
 constraint-dependencies = [
+    "anyio>=4.14.2",  # via httpx and mcp
     "authlib>=1.6.12",  # via fastmcp
-    "cryptography>=48.0.1",  # via authlib and pyjwt
+    "click>=8.3.3",  # via uvicorn
+    "cryptography>=50.0.0",  # via authlib and pyjwt
     "idna>=3.15",  # via httpx
     "joserfc>=1.6.8",  # via authlib
+    "mcp>=1.28.1",  # via fastmcp
     "pyjwt>=2.13.0",  # via mcp
     "python-multipart>=0.0.31",  # via mcp
     "starlette>=1.3.1",  # via mcp and sse-starlette
