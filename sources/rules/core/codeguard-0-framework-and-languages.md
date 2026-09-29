@@ -2,7 +2,6 @@
 description: Framework & language security guides (Django/DRF, Laravel/Symfony/Rails,
   .NET, Java/JAAS, Node.js, PHP config)
 languages:
-- c
 - java
 - javascript
 - kotlin
@@ -10,8 +9,6 @@ languages:
 - python
 - ruby
 - typescript
-- xml
-- yaml
 alwaysApply: false
 ---
 
