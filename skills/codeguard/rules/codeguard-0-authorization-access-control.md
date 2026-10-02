@@ -24,14 +24,14 @@ and provide strong transaction authorization where necessary.
 
 ### Core Principles
 
-- Deny by Default: The default for any access request should be 'deny'. Explicitly grant permissions to roles or users
-  rather than explicitly denying them. When no allow rule matches, return HTTP 403 Forbidden.
-- Principle of Least Privilege: Grant users the minimum level of access required to perform their job functions.
-  Regularly audit permissions to ensure they are not excessive.
-- Validate Permissions on Every Request: Check authorization for every single request, regardless of source (AJAX, API,
-  direct). Use middleware/filters to ensure consistent enforcement.
-- Prefer ABAC/ReBAC over RBAC: Use Attribute-Based Access Control (ABAC) or Relationship-Based Access Control (ReBAC)
-  for fine-grained permissions instead of simple role-based access control.
+1. Deny by Default: The default for any access request should be 'deny'. Explicitly grant permissions to roles or users
+   rather than explicitly denying them. When no allow rule matches, return HTTP 403 Forbidden.
+2. Principle of Least Privilege: Grant users the minimum level of access required to perform their job functions.
+   Regularly audit permissions to ensure they are not excessive.
+3. Validate Permissions on Every Request: Check authorization for every single request, regardless of source (AJAX, API,
+   direct). Use middleware/filters to ensure consistent enforcement.
+4. Prefer ABAC/ReBAC over RBAC: Use Attribute-Based Access Control (ABAC) or Relationship-Based Access Control (ReBAC)
+   for fine-grained permissions instead of simple role-based access control.
 
 ### Systemic Controls
 
