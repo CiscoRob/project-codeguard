@@ -1,19 +1,19 @@
 """YAML frontmatter, tag, and project-version helpers."""
 
 import os
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-import utils  # noqa: E402
+import utils
 
 
 class UtilsTests(unittest.TestCase):
+    """Test utils behavior."""
+
     def test_frontmatter_parser_accepts_valid_yaml(self):
+        """Verify frontmatter parser accepts valid yaml."""
         frontmatter, body = utils.parse_frontmatter_and_content(
             "---\ndescription: Example\n---\n\n# Title\n"
         )
@@ -21,17 +21,20 @@ class UtilsTests(unittest.TestCase):
         self.assertEqual(body, "# Title")
 
     def test_frontmatter_parser_rejects_missing_or_invalid_delimiters(self):
+        """Verify frontmatter parser rejects missing or invalid delimiters."""
         for content in ("plain text", "---\ndescription: Example", "---\n: invalid\n---\nbody"):
             with self.subTest(content=content):
                 self.assertEqual(utils.parse_frontmatter_and_content(content), (None, content))
 
     def test_tags_are_normalized_and_duplicate_free(self):
+        """Verify tags are normalized and duplicate free."""
         self.assertEqual(
             utils.validate_tags(["Authentication", "authentication", "WEB"]),
             ["authentication", "web"],
         )
 
     def test_tags_reject_wrong_types_empty_values_and_whitespace(self):
+        """Verify tags reject wrong types empty values and whitespace."""
         cases = (
             ("authentication", "must be a list"),
             ([], "cannot be empty"),
@@ -44,6 +47,7 @@ class UtilsTests(unittest.TestCase):
                 utils.validate_tags(value, "codeguard-example.md")
 
     def test_version_reader_handles_success_and_all_errors(self):
+        """Verify version reader handles success and all errors."""
         with tempfile.TemporaryDirectory() as directory:
             previous_directory = Path.cwd()
             os.chdir(directory)

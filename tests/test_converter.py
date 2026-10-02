@@ -1,35 +1,37 @@
 """Rule parser and format conversion contracts."""
 
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from rule_fixture import rule_text
 
-from converter import RuleConverter  # noqa: E402
-from formats import CursorFormat  # noqa: E402
+from converter import RuleConverter
+from formats import CursorFormat
 
 
 def rule_content(
     *, description="Example", languages="[python]", always_apply="false", body="# Title"
 ):
-    return (
-        "---\n"
-        f"description: {description}\n"
-        f"languages: {languages}\n"
-        f"alwaysApply: {always_apply}\n"
-        "tags: [authentication]\n"
-        "---\n\n"
-        f"{body}\n"
+    """Build a minimal rule document for tests."""
+    return rule_text(
+        description=description,
+        languages=languages,
+        always_apply=always_apply,
+        tags="[authentication]",
+        body=body,
     )
 
 
 class RuleConverterTests(unittest.TestCase):
+    """Test converter behavior."""
+
     def setUp(self):
+        """Create isolated fixtures for each test."""
         self.converter = RuleConverter([CursorFormat("1.5.0")])
 
     def test_authored_heading_and_metadata_are_preserved(self):
+        """Verify authored heading and metadata are preserved."""
         parsed = self.converter.parse_rule(rule_content(), "codeguard-example.md")
         self.assertEqual(parsed.description, "Example")
         self.assertEqual(parsed.languages, ["python"])
@@ -37,6 +39,7 @@ class RuleConverterTests(unittest.TestCase):
         self.assertEqual(parsed.content, "# Title\n\nrule_id: codeguard-example\n\n")
 
     def test_legacy_body_gets_rule_id_heading(self):
+        """Verify legacy body gets rule id heading."""
         parsed = self.converter.parse_rule(
             rule_content(body="## Existing section"), "codeguard-example.md"
         )
@@ -45,6 +48,7 @@ class RuleConverterTests(unittest.TestCase):
         )
 
     def test_always_apply_rule_has_universal_glob(self):
+        """Verify always apply rule has universal glob."""
         content = rule_content(languages="[]", always_apply="true")
         parsed = self.converter.parse_rule(content, "codeguard-always.md")
         self.assertEqual(parsed.languages, [])
@@ -52,6 +56,7 @@ class RuleConverterTests(unittest.TestCase):
         self.assertEqual(self.converter.generate_globs(parsed.languages), "**/*")
 
     def test_parse_rule_rejects_invalid_frontmatter(self):
+        """Verify parse rule rejects invalid frontmatter."""
         cases = (
             ("No YAML", "Missing or invalid frontmatter"),
             (rule_content().replace("description: Example\n", ""), "description"),
@@ -67,6 +72,7 @@ class RuleConverterTests(unittest.TestCase):
                 self.converter.parse_rule(content, "codeguard-example.md")
 
     def test_convert_writes_each_registered_format_output(self):
+        """Verify convert writes each registered format output."""
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "codeguard-example.md"
             path.write_text(rule_content(), encoding="utf-8")
@@ -80,6 +86,7 @@ class RuleConverterTests(unittest.TestCase):
         self.assertIn("# Title", result.outputs["cursor"].content)
 
     def test_convert_propagates_missing_file(self):
+        """Verify convert propagates missing file."""
         with self.assertRaises(FileNotFoundError):
             self.converter.convert("/does/not/exist/codeguard-rule.md")
 

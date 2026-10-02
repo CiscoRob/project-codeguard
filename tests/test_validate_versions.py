@@ -10,14 +10,17 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-import validate_versions as versions  # noqa: E402
+import validate_versions as versions
 
 
 class ValidateVersionsTests(unittest.TestCase):
+    """Test validate versions behavior."""
+
     def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="codeguard-versions-")
+        """Create isolated fixtures for each test."""
+        temporary = tempfile.TemporaryDirectory(  # pylint: disable=consider-using-with
+            prefix="codeguard-versions-"
+        )
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         (self.root / ".claude-plugin").mkdir()
@@ -34,6 +37,7 @@ class ValidateVersionsTests(unittest.TestCase):
         )
 
     def test_getters_and_version_comparison(self):
+        """Verify getters and version comparison."""
         self.assertEqual(versions.get_pyproject_version(self.root), "1.5.0")
         self.assertEqual(versions.get_plugin_version(self.root), "1.5.0")
         self.assertEqual(versions.get_marketplace_version(self.root), "1.5.0")
@@ -47,6 +51,7 @@ class ValidateVersionsTests(unittest.TestCase):
         )
 
     def test_setters_update_all_manifest_versions(self):
+        """Verify setters update all manifest versions."""
         versions.set_plugin_version("2.0.0", self.root)
         versions.set_codex_plugin_version("2.0.0", self.root)
         versions.set_marketplace_version("2.0.0", self.root)
@@ -63,6 +68,7 @@ class ValidateVersionsTests(unittest.TestCase):
             self.assertTrue(path.read_text().endswith("\n"))
 
     def test_skill_frontmatter_value_requires_key_and_delimiters(self):
+        """Verify skill frontmatter value requires key and delimiters."""
         skill = self.root / "skills" / "codeguard" / "SKILL.md"
         skill.write_text("No frontmatter")
         with self.assertRaisesRegex(ValueError, "Missing front matter"):
@@ -72,11 +78,13 @@ class ValidateVersionsTests(unittest.TestCase):
             versions.get_skill_codeguard_version(self.root)
 
     def test_default_validation_root_is_script_parent(self):
+        """Verify default validation root is script parent."""
         fake_script = self.root / "src" / "validate_versions.py"
         with mock.patch.object(versions, "__file__", str(fake_script)):
             self.assertTrue(all(check.matches for check in versions.validate_versions("1.5.0")))
 
     def test_cli_reports_usage_success_and_mismatch(self):
+        """Verify cli reports usage success and mismatch."""
         output = io.StringIO()
         with (
             mock.patch.object(sys, "argv", ["validate_versions.py"]),
@@ -97,6 +105,7 @@ class ValidateVersionsTests(unittest.TestCase):
             self.assertIn("pyproject.toml", output.getvalue())
 
     def test_module_entry_point_returns_a_status(self):
+        """Verify module entry point returns a status."""
         with (
             mock.patch.object(sys, "argv", ["validate_versions.py"]),
             contextlib.redirect_stdout(io.StringIO()),

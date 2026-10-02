@@ -167,14 +167,17 @@ For top-level Python tooling changes under `src/`, also run the rule and convers
 the `Validate Rules` workflow is the current CI gate for that tooling.
 
 Python files under `src/` and `tests/` use Ruff for formatting and linting. Pylint checks top-level converter tooling
-for errors. Pylance provides editor type diagnostics using the `[tool.pyright]` settings in `pyproject.toml`; CI runs
-Pyright against the same settings.
+for errors and the tests against its full rule set. Test functions must have cyclomatic complexity below 4.
+Pylance provides editor type diagnostics using the `[tool.pyright]` settings in `pyproject.toml`; CI runs Pyright against
+the same settings.
 Run the same checks as CI with:
 
 ```bash
 uv run --with ruff==0.16.9 ruff format --check src tests
 uv run --with ruff==0.16.9 ruff check src tests
-uv run --with pylint==4.0.9 pylint --errors-only src/*.py src/formats/*.py tests/*.py
+uv run --with ruff==0.16.9 ruff check tests --select C901
+PYTHONPATH=src uv run --with pylint==4.0.9 pylint --errors-only src/*.py src/formats/*.py
+PYTHONPATH=src uv run --with pylint==4.0.9 pylint tests/*.py
 uv run --with pyright==1.1.414 --with coverage==7.16.1 pyright --project pyproject.toml
 uv run --with coverage==7.16.1 python tests/check_python_coverage.py
 ```
@@ -182,6 +185,8 @@ uv run --with coverage==7.16.1 python tests/check_python_coverage.py
 Use `uv run --with ruff==0.16.9 ruff format src tests` to apply Python formatting.
 Each top-level `src/*.py` module must have a matching `tests/test_<module>.py` file that independently covers at least
 95% of its statements. The coverage command checks each module separately and fails if a test file is missing.
+Keep unit tests fast, isolated, self-checking, and repeatable. Use small temporary directories to verify file output,
+and mock calls that would change repository metadata or access external services.
 
 ## AI-assisted contributions
 

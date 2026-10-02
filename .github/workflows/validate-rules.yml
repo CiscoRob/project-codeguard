@@ -73,7 +73,9 @@ jobs:
         run: |
           uv run --with ruff==0.16.9 ruff format --check src tests
           uv run --with ruff==0.16.9 ruff check src tests
-          uv run --with pylint==4.0.9 pylint --errors-only src/*.py src/formats/*.py tests/*.py
+          uv run --with ruff==0.16.9 ruff check tests --select C901
+          PYTHONPATH=src uv run --with pylint==4.0.9 pylint --errors-only src/*.py src/formats/*.py
+          PYTHONPATH=src uv run --with pylint==4.0.9 pylint tests/*.py
 
       - name: Test each Python script with 95% coverage
         run: uv run --with coverage==7.16.1 python tests/check_python_coverage.py

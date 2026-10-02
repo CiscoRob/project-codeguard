@@ -1,5 +1,8 @@
 """Regression tests for the release rule converter entry point."""
 
+# Private release helpers are exercised directly to meet the per-script coverage contract.
+# pylint: disable=protected-access
+
 import contextlib
 import io
 import os
@@ -10,14 +13,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
+import convert_to_ide_formats as converter_script
+import emit_agents
+import validate_versions
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPOSITORY_ROOT / "src" / "convert_to_ide_formats.py"
-sys.path.insert(0, str(SCRIPT_PATH.parent))
-
-import convert_to_ide_formats as converter_script  # noqa: E402
-import emit_agents  # noqa: E402
-import validate_versions  # noqa: E402
-
 SCRIPT_CODE = compile(SCRIPT_PATH.read_bytes(), str(SCRIPT_PATH), "exec")
 
 SKILL_TEMPLATE = """---
@@ -39,9 +40,15 @@ Old tag mapping
 """
 
 
-class ConvertToIdeFormatsTests(unittest.TestCase):
+# The suite intentionally has many focused cases for one release script.
+class ConvertToIdeFormatsTests(unittest.TestCase):  # pylint: disable=too-many-public-methods
+    """Test convert to ide formats behavior."""
+
     def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="codeguard-converter-")
+        """Create isolated fixtures for each test."""
+        temporary = tempfile.TemporaryDirectory(  # pylint: disable=consider-using-with
+            prefix="codeguard-converter-"
+        )
         self.addCleanup(temporary.cleanup)
         self.project = Path(temporary.name)
         (self.project / "src").mkdir()
@@ -51,6 +58,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         )
 
     def make_rule(self, source="core", name="codeguard-example.md", tags="authentication"):
+        """Create rule fixture."""
         directory = self.project / "sources" / "rules" / source
         directory.mkdir(parents=True, exist_ok=True)
         rule = directory / name
@@ -69,15 +77,17 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         return rule
 
     def make_template(self):
+        """Create template fixture."""
         template = self.project / "sources" / "rules" / "core" / "codeguard-SKILLS.md.template"
         template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(SKILL_TEMPLATE, encoding="utf-8")
         return template
 
-    def run_cli(self, *args, agent_error=None):
+    def run_cli(self, *args, agent_error=None, output=None):
         """Run the real CLI body with an isolated project root and no plugin writes."""
         previous_directory = Path.cwd()
-        output = io.StringIO()
+        if output is None:
+            output = io.StringIO()
         with contextlib.ExitStack() as stack:
             plugin = stack.enter_context(mock.patch.object(validate_versions, "set_plugin_version"))
             marketplace = stack.enter_context(
@@ -96,12 +106,13 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
                     "__name__": "__main__",
                     "__file__": str(self.project / "src" / SCRIPT_PATH.name),
                 }
-                exec(SCRIPT_CODE, namespace)
+                exec(SCRIPT_CODE, namespace)  # pylint: disable=exec-used
             finally:
                 os.chdir(previous_directory)
         return output.getvalue(), plugin, marketplace, codex, agents
 
     def test_mapping_list_is_sorted_and_replaces_only_the_marked_section(self):
+        """Verify mapping list is sorted and replaces only the marked section."""
         skill = self.project / "SKILL.md"
         skill.write_text("Before\n<!-- TAG_MAPPINGS_START -->old<!-- TAG_MAPPINGS_END -->\nAfter\n")
 
@@ -118,6 +129,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         )
 
     def test_mapping_list_requires_both_markers(self):
+        """Verify mapping list requires both markers."""
         skill = self.project / "SKILL.md"
         skill.write_text("No markers here")
         with self.assertRaisesRegex(RuntimeError, "LANGUAGE_MAPPINGS section markers"):
@@ -126,6 +138,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
             )
 
     def test_tag_filter_matches_all_requested_tags(self):
+        """Verify tag filter matches all requested tags."""
         self.assertTrue(converter_script.matches_tag_filter([], []))
         self.assertTrue(
             converter_script.matches_tag_filter(
@@ -139,6 +152,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         )
 
     def test_sync_plugin_metadata_updates_every_manifest(self):
+        """Verify sync plugin metadata updates every manifest."""
         with (
             mock.patch.object(converter_script, "set_plugin_version") as plugin,
             mock.patch.object(converter_script, "set_marketplace_version") as marketplace,
@@ -149,6 +163,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
             update.assert_called_once_with("1.5.0", converter_script.PROJECT_ROOT)
 
     def test_convert_rules_writes_all_formats_and_sorted_skill_mappings(self):
+        """Verify convert rules writes all formats and sorted skill mappings."""
         self.make_rule(name="codeguard-zeta.md", tags="data-security")
         self.make_rule(name="codeguard-alpha.md", tags="authentication")
         template = self.make_template()
@@ -183,6 +198,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         )
 
     def test_convert_rules_can_filter_tags_without_generating_skills(self):
+        """Verify convert rules can filter tags without generating skills."""
         self.make_rule(source="owasp", name="codeguard-keep.md", tags="authentication")
         self.make_rule(source="owasp", name="codeguard-skip.md", tags="data-security")
         output = self.project / "dist"
@@ -204,6 +220,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         self.assertFalse((self.project / "skills").exists())
 
     def test_convert_rules_uses_project_version_if_none_given(self):
+        """Verify convert rules uses project version if none given."""
         self.make_rule(source="owasp")
         with mock.patch.object(
             converter_script, "get_version_from_pyproject", return_value="2.0.0"
@@ -216,6 +233,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         version.assert_called_once_with()
 
     def test_convert_rules_rejects_invalid_input_paths(self):
+        """Verify convert rules rejects invalid input paths."""
         missing = self.project / "missing"
         with self.assertRaises(FileNotFoundError):
             converter_script.convert_rules(str(missing), version="1.5.0")
@@ -235,6 +253,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
             converter_script.convert_rules(str(wrong_extension.parent), version="1.5.0")
 
     def test_convert_rules_accepts_one_rule_file(self):
+        """Verify convert rules accepts one rule file."""
         rule = self.make_rule(source="owasp")
         results = converter_script.convert_rules(
             str(rule), str(self.project / "dist"), include_agentskills=False, version="1.5.0"
@@ -242,6 +261,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         self.assertEqual(results["success"], [rule.name])
 
     def test_convert_rules_reports_each_conversion_error_type(self):
+        """Verify convert rules reports each conversion error type."""
         for name in ("codeguard-a.md", "codeguard-b.md", "codeguard-c.md"):
             self.make_rule(source="owasp", name=name)
         with mock.patch.object(converter_script, "RuleConverter") as converter:
@@ -262,6 +282,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         self.assertIn("Unexpected error", results["errors"][2])
 
     def test_convert_rules_requires_a_skill_template_for_core(self):
+        """Verify convert rules requires a skill template for core."""
         self.make_rule()
         with (
             mock.patch.object(converter_script, "PROJECT_ROOT", self.project),
@@ -277,6 +298,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
                 )
 
     def test_resolve_source_paths_accepts_names_but_rejects_escape(self):
+        """Verify resolve source paths accepts names but rejects escape."""
         self.assertEqual(
             converter_script._resolve_source_paths(SimpleNamespace(source=None)),
             [Path("sources/rules/core")],
@@ -293,6 +315,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
                 converter_script._resolve_source_paths(SimpleNamespace(source=[invalid]))
 
     def test_find_and_print_duplicate_rule_filenames(self):
+        """Verify find and print duplicate rule filenames."""
         self.make_rule(source="core", name="codeguard-duplicate.md")
         self.make_rule(source="owasp", name="codeguard-duplicate.md")
         root = self.project / "sources" / "rules"
@@ -306,6 +329,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         self.assertIn("owasp/codeguard-duplicate.md", output.getvalue())
 
     def test_cli_builds_core_and_owasp_and_cleans_stale_outputs(self):
+        """Verify cli builds core and owasp and cleans stale outputs."""
         self.make_rule(source="core")
         self.make_rule(source="owasp", name="codeguard-extra.md", tags="data-security")
         self.make_template()
@@ -335,6 +359,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         agents.assert_called_once()
 
     def test_cli_owasp_only_skips_skill_and_agent_generation(self):
+        """Verify cli owasp only skips skill and agent generation."""
         self.make_rule(source="owasp")
         output, _, _, _, agents = self.run_cli("--source", "owasp", "--output-dir", "dist")
         self.assertIn("Skipped agent emission", output)
@@ -342,15 +367,19 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         agents.assert_not_called()
 
     def test_cli_rejects_invalid_or_missing_sources(self):
+        """Verify cli rejects invalid or missing sources."""
         for arguments, expected in (
             (("--source", "../outside"), "non-empty relative"),
             (("--source", "missing"), "Source path(s) not found"),
         ):
+            output = io.StringIO()
             with self.subTest(arguments=arguments), self.assertRaises(SystemExit) as error:
-                self.run_cli(*arguments)
+                self.run_cli(*arguments, output=output)
             self.assertEqual(error.exception.code, 1)
+            self.assertIn(expected, output.getvalue())
 
     def test_cli_rejects_duplicate_rule_names(self):
+        """Verify cli rejects duplicate rule names."""
         self.make_rule(source="core", name="codeguard-duplicate.md")
         self.make_rule(source="owasp", name="codeguard-duplicate.md")
         with self.assertRaises(SystemExit) as error:
@@ -358,12 +387,14 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 1)
 
     def test_cli_rejects_missing_skill_template(self):
+        """Verify cli rejects missing skill template."""
         self.make_rule(source="core")
         with self.assertRaises(SystemExit) as error:
             self.run_cli()
         self.assertEqual(error.exception.code, 1)
 
     def test_cli_exits_when_a_rule_cannot_be_converted(self):
+        """Verify cli exits when a rule cannot be converted."""
         bad_rule = self.make_rule(source="owasp")
         bad_rule.write_text("invalid frontmatter")
         with self.assertRaises(SystemExit) as error:
@@ -371,6 +402,7 @@ class ConvertToIdeFormatsTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 1)
 
     def test_cli_exits_when_agent_emission_fails(self):
+        """Verify cli exits when agent emission fails."""
         self.make_rule(source="core")
         self.make_template()
         with self.assertRaises(SystemExit) as error:

@@ -1,16 +1,16 @@
 """Per-host agent bundle generation and validation."""
 
-import sys
+# Direct checks of private helpers cover validation and escaping edge cases.
+# pylint: disable=protected-access
+
 import tempfile
 import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-import emit_agents as agents  # noqa: E402
-from artifact_targets import AgentHost, TomlAgentHost  # noqa: E402
+import emit_agents as agents
+from artifact_targets import AgentHost, TomlAgentHost
 
 AGENT_SOURCE = """---
 name: Reviewer
@@ -40,14 +40,20 @@ TOML_HOST: dict[str, TomlAgentHost] = {
 
 
 class EmitAgentsTests(unittest.TestCase):
+    """Test emit agents behavior."""
+
     def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="codeguard-agents-")
+        """Create isolated fixtures for each test."""
+        temporary = tempfile.TemporaryDirectory(  # pylint: disable=consider-using-with
+            prefix="codeguard-agents-"
+        )
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.sources = self.root / "sources" / "agents"
         self.output = self.root / "dist"
 
     def make_agent(self, content=AGENT_SOURCE, name="reviewer"):
+        """Create agent fixture."""
         directory = self.sources / name
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / "AGENT.md"
@@ -55,10 +61,12 @@ class EmitAgentsTests(unittest.TestCase):
         return path
 
     def make_host_rules(self):
+        """Create host rules fixture."""
         for config in (*MARKDOWN_HOST.values(), *TOML_HOST.values()):
             (self.output / config["rules_dir"]).mkdir(parents=True, exist_ok=True)
 
     def test_emit_markdown_and_toml_agent_bundles(self):
+        """Verify emit markdown and toml agent bundles."""
         self.make_agent()
         self.make_host_rules()
 
@@ -78,6 +86,7 @@ class EmitAgentsTests(unittest.TestCase):
         self.assertIn("ending in .md", toml["developer_instructions"])
 
     def test_missing_source_and_default_hosts_are_handled(self):
+        """Verify missing source and default hosts are handled."""
         agents.emit_agents(agents_source_dir=self.sources, output_dir=self.output)
         self.make_agent()
         with (
@@ -87,6 +96,7 @@ class EmitAgentsTests(unittest.TestCase):
             agents.emit_agents(agents_source_dir=self.sources, output_dir=self.output)
 
     def test_missing_agent_manifest_is_rejected(self):
+        """Verify missing agent manifest is rejected."""
         (self.sources / "reviewer").mkdir(parents=True)
         with self.assertRaisesRegex(ValueError, "missing AGENT.md"):
             agents.emit_agents(
@@ -97,6 +107,7 @@ class EmitAgentsTests(unittest.TestCase):
             )
 
     def test_agent_source_requires_frontmatter_fields_and_placeholders(self):
+        """Verify agent source requires frontmatter fields and placeholders."""
         invalid_sources = (
             ("No YAML", "missing or non-mapping"),
             (AGENT_SOURCE.replace("name: Reviewer\n", ""), "missing required key 'name'"),
@@ -120,6 +131,7 @@ class EmitAgentsTests(unittest.TestCase):
                     agents._parse_agent_md(path)
 
     def test_merge_rejects_host_specific_key_collisions(self):
+        """Verify merge rejects host specific key collisions."""
         with self.assertRaisesRegex(ValueError, "collides with host"):
             agents._merge_frontmatter(
                 {"model": "custom"}, {"model": "inherit"}, "reviewer", ".cursor"
@@ -132,6 +144,7 @@ class EmitAgentsTests(unittest.TestCase):
         )
 
     def test_toml_helpers_reject_invalid_metadata_and_delimiter(self):
+        """Verify toml helpers reject invalid metadata and delimiter."""
         self.assertEqual(
             agents._frontmatter_string({"name": "Reviewer"}, "name", "reviewer"), "Reviewer"
         )
@@ -145,6 +158,7 @@ class EmitAgentsTests(unittest.TestCase):
             agents._toml_multiline_literal("bad ''' delimiter", agent="reviewer")
 
     def test_output_requires_a_preexisting_rules_directory(self):
+        """Verify output requires a preexisting rules directory."""
         with self.assertRaisesRegex(FileNotFoundError, "rules_dir"):
             agents._require_rules_dir(
                 output_base=self.output, host_name=".cursor", relative_path=".cursor/rules"
