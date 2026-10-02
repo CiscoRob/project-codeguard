@@ -4,15 +4,16 @@ Rule Converter
 Converts unified markdown rules to multiple IDE formats.
 Handles parsing, validation, and format generation.
 """
+
 from dataclasses import dataclass
 from pathlib import Path
 
-from language_mappings import languages_to_globs
-from utils import parse_frontmatter_and_content, validate_tags
 from formats import (
     BaseFormat,
     ProcessedRule,
 )
+from language_mappings import languages_to_globs
+from utils import parse_frontmatter_and_content, validate_tags
 
 
 @dataclass
@@ -196,7 +197,7 @@ class RuleConverter:
         globs = languages_to_globs(languages)
         return globs if globs else "**/*"
 
-    def convert(self, filepath: str) -> ConversionResult:
+    def convert(self, filepath: str | Path) -> ConversionResult:
         """
         Convert a rule file to all registered formats.
 

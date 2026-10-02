@@ -10,11 +10,9 @@ trim_trailing_whitespace = true
 
 [*.py]
 indent_size = 4
+max_line_length = 100
 
 [*.md*]
 max_line_length = 120
 # Markdown uses two trailing spaces for intentional hard line breaks.
 trim_trailing_whitespace = false
-
-[src/codeguard-mcp/**.py]
-max_line_length = 100
