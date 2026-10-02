@@ -163,9 +163,15 @@ class RuleConverter:
         if "tags" in frontmatter:
             tags = validate_tags(frontmatter["tags"], filename)
 
-        # Adding rule_id to the beginning of the content
+        # Keep the authored title as the generated top-level heading and place
+        # rule metadata after it. Older sources without a title use their ID.
         rule_id = Path(filename).stem
-        markdown_content = f"rule_id: {rule_id}\n\n{markdown_content}"
+        if markdown_content.startswith("# "):
+            title, _, body = markdown_content.partition("\n")
+            body = body.lstrip("\n")
+            markdown_content = f"{title}\n\nrule_id: {rule_id}\n\n{body}"
+        else:
+            markdown_content = f"# {rule_id}\n\nrule_id: {rule_id}\n\n{markdown_content}"
 
         return ProcessedRule(
             description=frontmatter["description"],

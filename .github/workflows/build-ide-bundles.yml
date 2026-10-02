@@ -30,6 +30,18 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install Markdown tools
+        run: npm ci
+
+      - name: Check source Markdown formatting and lint
+        run: npm run format:check && npm run lint
+
       - name: Get version from release
         id: get_version
         env:
@@ -50,6 +62,9 @@ jobs:
 
       - name: Generate IDE bundles
         run: uv run python src/convert_to_ide_formats.py
+
+      - name: Format and lint release Markdown
+        run: npm run prepare:release
 
       - name: Create release archives
         shell: bash

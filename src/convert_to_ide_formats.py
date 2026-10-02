@@ -72,21 +72,18 @@ def matches_tag_filter(rule_tags: list[str], filter_tags: list[str]) -> bool:
     return all(tag in rule_tags for tag in filter_tags)
 
 
-def _inject_mapping_table(
+def _inject_mapping_list(
     skill_path: Path,
     mapping: dict[str, list[str]],
     *,
-    key_header: str,
     marker_name: str,
 ) -> None:
-    """Replace ``<!-- {marker_name}_START/END -->`` in SKILL.md with a sorted
-    two-column markdown table built from ``mapping``. Missing markers raise."""
-    rules_col = "Rule Files to Apply"
-    sep = f"|{'-' * (len(key_header) + 2)}|{'-' * (len(rules_col) + 2)}|"
-    table_lines = [f"| {key_header} | {rules_col} |", sep]
+    """Replace mapping markers in SKILL.md with sorted, readable rule lists."""
+    list_lines = []
     for key in sorted(mapping):
-        table_lines.append(f"| {key} | {', '.join(sorted(mapping[key]))} |")
-    table = "\n".join(table_lines)
+        list_lines.append(f"- **{key}**:")
+        list_lines.extend(f"  - `{rule}`" for rule in sorted(mapping[key]))
+    rule_list = "\n".join(list_lines)
 
     start_marker = f"<!-- {marker_name}_START -->"
     end_marker = f"<!-- {marker_name}_END -->"
@@ -98,9 +95,9 @@ def _inject_mapping_table(
 
     start_idx = content.index(start_marker)
     end_idx = content.index(end_marker) + len(end_marker)
-    updated = content[:start_idx] + f"\n\n{table}\n\n" + content[end_idx:]
+    updated = content[:start_idx] + f"\n\n{rule_list}\n\n" + content[end_idx:]
     skill_path.write_text(updated, encoding="utf-8")
-    print(f"Updated SKILL.md with {marker_name} table")
+    print(f"Updated SKILL.md with {marker_name} list")
 
 
 def convert_rules(
@@ -271,16 +268,14 @@ def convert_rules(
         )
         output_skill_path.write_text(template_content, encoding="utf-8")
 
-        _inject_mapping_table(
+        _inject_mapping_list(
             output_skill_path,
             language_to_rules,
-            key_header="Language",
             marker_name="LANGUAGE_MAPPINGS",
         )
-        _inject_mapping_table(
+        _inject_mapping_list(
             output_skill_path,
             tag_to_rules,
-            key_header="Security Context (Tag)",
             marker_name="TAG_MAPPINGS",
         )
 
